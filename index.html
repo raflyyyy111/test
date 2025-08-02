@@ -217,11 +217,11 @@
             <input type="file" ref="fileInput" @change="handleFileImport" accept=".txt" style="display: none;">
         </div>
 
-        <div v-if="isLoading || finalOutput || error" class="result-box">
+        <div v-if="isLoading || output || error" class="result-box">
             <div v-if="isLoading">
                 <div v-for="log in terminalLog" class="terminal-log">> {{ log }}</div>
             </div>
-            <pre v-if="finalOutput" ref="outputElement"></pre>
+            <pre v-if="output" ref="outputElement"></pre>
             <p v-if="error" class="error-message">> ERROR: {{ error }}</p>
         </div>
     </div>
@@ -243,15 +243,11 @@
     };
 
     const customEncoder = {
-        // *** BAGIAN INI TELAH DIPERBAIKI ***
-        // Peta sekarang dijamin 1-ke-1, tidak ada simbol yang duplikat.
         map: {
-            // Uppercase
             'A': '@', 'B': '×', 'C': '%', 'D': '$', 'E': '#', 'F': '&', 'G': '`',
             'H': ';', 'I': ':', 'J': '_', 'K': '<', 'L': '>', 'M': '|', 'N': '?',
             'O': '*', 'P': '(', 'Q': ')', 'R': '[', 'S': ']', 'T': '{', 'U': '}',
             'V': '\\', 'W': '¡', 'X': '¢', 'Y': '£', 'Z': '¤',
-            // Numbers
             '0': '!', '1': '±', '2': '^', '3': '§', '4': '¨', '5': '©', '6': 'ª',
             '7': '«', '8': '®', '9': '¯',
         },
@@ -279,7 +275,7 @@
                 text: '',
                 passphrase: '',
                 output: '',
-                finalOutput: '',
+                finalOutput: '', // Tetap digunakan untuk copy & download
                 error: '',
                 isLoading: false,
                 terminalLog: [],
@@ -291,6 +287,15 @@
                 return new Promise(resolve => setTimeout(resolve, ms));
             },
             
+            async typeEffect(element, text, speed) {
+                if(!element) return;
+                element.innerHTML = '';
+                for (let i = 0; i < text.length; i++) {
+                    element.innerHTML = text.substring(0, i + 1);
+                    await this.sleep(speed);
+                }
+            },
+
             async getKey(passphrase, salt) {
                 const keyMaterial = await crypto.subtle.importKey(
                     'raw', new TextEncoder().encode(passphrase), { name: 'PBKDF2' }, false, ['deriveKey']
@@ -311,7 +316,7 @@
                     const salt = crypto.getRandomValues(new Uint8Array(16));
                     const iv = crypto.getRandomValues(new Uint8Array(12));
                     
-                    await this.sleep(500); this.terminalLog.push('Generating cryptographic key from passphrase...');
+                    await this.sleep(500); this.terminalLog.push('Generating cryptographic key...');
                     const key = await this.getKey(this.passphrase, salt);
                     
                     await this.sleep(500); this.terminalLog.push('Encrypting data with AES-256-GCM...');
@@ -323,12 +328,18 @@
                     
                     await this.sleep(300); this.terminalLog.push('Applying custom symbol encoding...');
                     this.output = customEncoder.encode(base64Str);
+                    this.finalOutput = this.output; // Simpan hasil akhir untuk copy/download
                     
                     await this.sleep(300); this.terminalLog.push('Encryption complete.');
                     
+                    this.isLoading = false;
+                    // Tunggu Vue render elemen, baru jalankan efek ketik
+                    this.$nextTick(() => {
+                        this.typeEffect(this.$refs.outputElement, this.output, 10);
+                    });
+
                 } catch (e) {
                     this.error = 'Proses enkripsi gagal.';
-                } finally {
                     this.isLoading = false;
                 }
             },
@@ -358,7 +369,14 @@
                     const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
                     
                     this.output = new TextDecoder().decode(decrypted);
+                    this.finalOutput = this.output; // Simpan hasil akhir untuk copy/download
                     await this.sleep(300); this.terminalLog.push('Decryption complete.');
+                    
+                    this.isLoading = false;
+                     // Tunggu Vue render elemen, baru jalankan efek ketik
+                    this.$nextTick(() => {
+                        this.typeEffect(this.$refs.outputElement, this.output, 20);
+                    });
 
                 } catch (e) {
                     if (e.message.includes('Format')) {
@@ -366,7 +384,6 @@
                     } else {
                         this.error = 'Kata kunci salah';
                     }
-                } finally {
                     this.isLoading = false;
                 }
             },
@@ -406,11 +423,6 @@
                 }).catch(err => {
                     this.error = 'Gagal menyalin ke clipboard.';
                 });
-            }
-        },
-        watch: {
-            output(newVal) {
-                this.finalOutput = newVal;
             }
         }
     }).mount('#app');
