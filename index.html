@@ -5,21 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R-code</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #000000;
-            --text-color: #00FF00; /* Bright Green */
-            --primary-color: #00FF00;
-            --secondary-color: #0d0d0d;
-            --border-color: #008000; /* Darker Green */
+            --primary-green: #00FF7F; /* SpringGreen */
+            --secondary-green: #39FF14; /* NeonGreen */
+            --dark-green: #006400;
+            --text-color: var(--primary-green);
+            --border-color: #004d00;
+            --card-bg: rgba(10, 25, 10, 0.3);
             --error-color: #FF4136;
         }
 
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        @keyframes scanline {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100%; }
+        }
+
         body {
-            font-family: 'Courier New', Courier, monospace; /* Classic terminal font */
+            font-family: 'Roboto Mono', monospace;
             background-color: var(--bg-color);
+            background-image: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03),
+                rgba(0, 255, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
             color: var(--text-color);
-            text-shadow: 0 0 2px var(--primary-color);
             margin: 0;
             padding: 20px;
             display: flex;
@@ -37,102 +57,116 @@
         }
 
         h1 {
-            color: var(--primary-color);
+            color: var(--secondary-green);
+            text-shadow: 0 0 5px var(--secondary-green), 0 0 10px var(--secondary-green);
             text-align: center;
             margin: 0;
             letter-spacing: 4px;
             text-transform: uppercase;
+            height: 1.5em; /* Reserve space */
+        }
+
+        h1 .caret {
+            animation: blink 1s step-end infinite;
+            color: var(--secondary-green);
+            font-weight: bold;
         }
         
         .author {
             text-align: center;
-            color: var(--border-color);
-            margin: -10px 0 10px 0;
-            font-size: 0.9em;
-        }
-
-        .warning-box {
-            background-color: #00ff000f;
-            border: 1px solid var(--border-color);
-            padding: 15px;
-            border-radius: 0;
-            text-align: center;
+            color: var(--dark-green);
+            margin: -15px 0 10px 0;
             font-size: 0.9em;
         }
 
         .card {
-            background-color: var(--secondary-color);
+            background-color: var(--card-bg);
+            backdrop-filter: blur(2px);
             padding: 25px;
-            border-radius: 0;
             border: 1px solid var(--border-color);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
         }
 
         textarea, input[type="password"] {
             width: 100%;
             padding: 12px;
             margin-bottom: 15px;
-            border-radius: 0;
             border: 1px solid var(--border-color);
-            background-color: var(--bg-color);
+            background-color: #051005;
             color: var(--text-color);
             font-family: inherit;
             font-size: 1em;
             box-sizing: border-box;
             resize: vertical;
-            text-shadow: 0 0 2px var(--primary-color);
         }
 
         textarea:focus, input[type="password"]:focus {
-            outline: 1px solid var(--primary-color);
-            box-shadow: 0 0 10px var(--primary-color);
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
         
         textarea {
             min-height: 150px;
         }
 
-        .actions {
+        .actions, .file-actions {
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
         }
 
+        .file-actions {
+            margin-top: 15px;
+        }
+
         button {
-            padding: 12px 20px;
-            border: 1px solid var(--primary-color);
-            border-radius: 0;
-            background-color: var(--primary-color);
+            padding: 10px 20px;
+            border: 1px solid var(--primary-green);
+            background: linear-gradient(45deg, var(--primary-green), var(--secondary-green));
             color: var(--bg-color);
             font-family: inherit;
             font-size: 1em;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
+            transition: all 0.2s ease;
+            text-shadow: none;
+        }
+        
+        button.secondary {
+            background: transparent;
+            color: var(--primary-green);
         }
 
         button:hover {
-            background-color: var(--bg-color);
-            color: var(--primary-color);
+            box-shadow: 0 0 15px var(--secondary-green);
+            transform: translateY(-2px);
         }
         
         button:disabled {
-            background-color: #555;
+            background: #555;
             border-color: #555;
             color: #999;
             cursor: not-allowed;
-            text-shadow: none;
+            box-shadow: none;
+            transform: none;
         }
         
         .result-box {
             margin-top: 20px;
             word-wrap: break-word;
             white-space: pre-wrap;
-            background-color: var(--bg-color);
+            background-color: #051005;
             padding: 15px;
             border: 1px dashed var(--border-color);
-            min-height: 50px;
+            min-height: 80px;
+            font-size: 0.95em;
+        }
+        
+        .terminal-log {
+            color: var(--dark-green);
         }
 
         .error-message {
@@ -140,45 +174,41 @@
             font-weight: bold;
             text-shadow: 0 0 5px var(--error-color);
         }
-        
-        .loading-indicator {
-            text-align: center;
-            padding: 10px;
-        }
 
     </style>
 </head>
 <body>
 
 <div id="app">
-    <h1>R-code 📟</h1>
+    <h1 ref="titleElement"><span class="caret">|</span></h1>
     <p class="author">dibuat oleh rxh</p>
-    
-    <div class="warning-box">
-        <strong>PERHATIAN:</strong> Semua proses terjadi di browser Anda. Lupa kata kunci akan menyebabkan data hilang selamanya. Kami tidak bisa memulihkannya.
-    </div>
 
     <div class="card">
-        <textarea v-model="text" placeholder="[type text to encrypt // paste encrypted text to decrypt]"></textarea>
+        <textarea v-model="text" placeholder="Masukkan teks atau paste kode"></textarea>
         
-        <input type="password" v-model="passphrase" placeholder="[enter secret key]">
+        <input type="password" v-model="passphrase" placeholder="Kata kunci rahasia">
 
         <div class="actions">
-            <button @click="encrypt" :disabled="!text || !passphrase || isLoading">
-                {{ isLoading ? 'processing...' : 'Encrypt' }}
+            <button @click="runEncrypt" :disabled="!text || !passphrase || isLoading">
+                {{ isLoading ? 'Processing...' : 'Encrypt' }}
             </button>
-            <button @click="decrypt" :disabled="!text || !passphrase || isLoading">
-                {{ isLoading ? 'processing...' : 'Decrypt' }}
+            <button @click="runDecrypt" :disabled="!text || !passphrase || isLoading">
+                {{ isLoading ? 'Processing...' : 'Decrypt' }}
             </button>
         </div>
         
-        <div v-if="isLoading" class="loading-indicator">
-            > running cryptographic sequence...
+        <div class="file-actions">
+            <button @click="handleDownload" class="secondary" :disabled="!output">Download (.txt)</button>
+            <button @click="triggerFileInput" class="secondary" :disabled="isLoading">Import (.txt)</button>
+            <input type="file" ref="fileInput" @change="handleFileImport" accept=".txt" style="display: none;">
         </div>
 
-        <div v-if="output || error" class="result-box">
-            <pre v-if="output">{{ output }}</pre>
-            <p v-if="error" class="error-message">> {{ error }}</p>
+        <div v-if="isLoading || output || error" class="result-box">
+            <div v-if="isLoading">
+                <div v-for="log in terminalLog" class="terminal-log">> {{ log }}</div>
+            </div>
+            <pre v-if="finalOutput" ref="outputElement"></pre>
+            <p v-if="error" class="error-message">> ERROR: {{ error }}</p>
         </div>
     </div>
 </div>
@@ -186,21 +216,33 @@
 <script>
     const utils = {
         arrayBufferToBase64(buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
         },
         base64ToArrayBuffer(base64) {
-            const binary_string = window.atob(base64);
-            const len = binary_string.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
+            const binary_string = atob(base64);
+            const bytes = new Uint8Array(binary_string.length);
+            for (let i = 0; i < bytes.length; i++) {
                 bytes[i] = binary_string.charCodeAt(i);
             }
             return bytes.buffer;
+        }
+    };
+
+    const customEncoder = {
+        map: { 'A': '@', 'B': '×', 'C': '%', 'D': '$', 'E': '#', 'F': '&', 'G': '`', 'H': ';', 'I': ':', 'J': '_', 'K': '-', 'L': '+', 'M': '=', 'N': '|', 'O': '~', 'P': '<', 'Q': '>', 'R': '*', 'S': '(', 'T': ')', 'U': '[', 'V': ']', 'W': '{', 'X': '}', 'Y': '\\', 'Z': '/', 'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e', 'f': 'f', 'g': 'g', 'h': 'h', 'i': 'i', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n', 'o': 'o', 'p': 'p', 'q': 'q', 'r': 'r', 's': 's', 't': 't', 'u': 'u', 'v': 'v', 'w': 'w', 'x': 'x', 'y': 'y', 'z': 'z', '0': '!', '1': '?', '2': '^', '3': '(', '4': ')', '5': '[', '6': ']', '7': '{', '8': '}', '9': '~', '+': '+', '/': '/', '=': '='},
+        reverseMap: null,
+        
+        init() {
+            this.reverseMap = Object.fromEntries(Object.entries(this.map).map(([k, v]) => [v, k]));
+        },
+
+        encode(base64Str) {
+            return base64Str.split('').map(char => this.map[char] || char).join('');
+        },
+
+        decode(customStr) {
+            if (!this.reverseMap) this.init();
+            return customStr.split('').map(char => this.reverseMap[char] || char).join('');
         }
     };
 
@@ -210,99 +252,148 @@
                 text: '',
                 passphrase: '',
                 output: '',
+                finalOutput: '',
                 error: '',
-                isLoading: false
+                isLoading: false,
+                terminalLog: []
             };
         },
+        mounted() {
+            this.typeEffect(this.$refs.titleElement, "R-code", 150);
+        },
         methods: {
-            async getKey(passphrase, salt) {
-                const enc = new TextEncoder();
-                const keyMaterial = await window.crypto.subtle.importKey(
-                    'raw',
-                    enc.encode(passphrase),
-                    { name: 'PBKDF2' },
-                    false,
-                    ['deriveKey']
-                );
-                return window.crypto.subtle.deriveKey(
-                    {
-                        "name": 'PBKDF2',
-                        salt: salt,
-                        "iterations": 600000,
-                        "hash": 'SHA-256'
-                    },
-                    keyMaterial,
-                    { "name": 'AES-GCM', "length": 256 },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
             },
             
-            async encrypt() {
-                if (!this.text || !this.passphrase) return;
+            async typeEffect(element, text, speed, onComplete = () => {}) {
+                element.innerHTML = '';
+                const caret = '<span class="caret">|</span>';
+                for (let i = 0; i < text.length; i++) {
+                    element.innerHTML = text.substring(0, i + 1) + caret;
+                    await this.sleep(speed);
+                }
+                element.innerHTML = text; // Remove caret at the end
+                onComplete();
+            },
+
+            async getKey(passphrase, salt) {
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw', new TextEncoder().encode(passphrase), { name: 'PBKDF2' }, false, ['deriveKey']
+                );
+                return crypto.subtle.deriveKey(
+                    { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+                    keyMaterial, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+                );
+            },
+
+            async runEncrypt() {
                 this.isLoading = true;
-                this.output = '';
-                this.error = '';
+                this.output = ''; this.finalOutput = ''; this.error = '';
+                this.terminalLog = [];
 
                 try {
-                    const salt = window.crypto.getRandomValues(new Uint8Array(16));
-                    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                    await this.sleep(200); this.terminalLog.push('Initializing encryption sequence...');
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    
+                    await this.sleep(500); this.terminalLog.push('Generating cryptographic key from passphrase...');
                     const key = await this.getKey(this.passphrase, salt);
                     
-                    const enc = new TextEncoder();
-                    const encodedText = enc.encode(this.text);
-
-                    const ciphertext = await window.crypto.subtle.encrypt(
-                        { name: 'AES-GCM', iv: iv },
-                        key,
-                        encodedText
+                    await this.sleep(500); this.terminalLog.push('Encrypting data with AES-256-GCM...');
+                    const ciphertext = await crypto.subtle.encrypt(
+                        { name: 'AES-GCM', iv }, key, new TextEncoder().encode(this.text)
                     );
-
-                    const saltB64 = utils.arrayBufferToBase64(salt);
-                    const ivB64 = utils.arrayBufferToBase64(iv);
-                    const ciphertextB64 = utils.arrayBufferToBase64(ciphertext);
-
-                    this.output = `${saltB64}.${ivB64}.${ciphertextB64}`;
+                    
+                    const base64Str = `${utils.arrayBufferToBase64(salt)}.${utils.arrayBufferToBase64(iv)}.${utils.arrayBufferToBase64(ciphertext)}`;
+                    
+                    await this.sleep(300); this.terminalLog.push('Applying custom symbol encoding...');
+                    this.output = customEncoder.encode(base64Str);
+                    
+                    await this.sleep(300); this.terminalLog.push('Encryption complete.');
+                    
+                    this.isLoading = false;
+                    this.typeEffect(this.$refs.outputElement, this.output, 10);
 
                 } catch (e) {
-                    this.error = 'ERROR: Encryption sequence failed.';
-                } finally {
+                    this.error = 'Proses enkripsi gagal.';
                     this.isLoading = false;
                 }
             },
 
-            async decrypt() {
-                if (!this.text || !this.passphrase) return;
+            async runDecrypt() {
                 this.isLoading = true;
-                this.output = '';
-                this.error = '';
-
+                this.output = ''; this.finalOutput = ''; this.error = '';
+                this.terminalLog = [];
+                
                 try {
-                    const parts = this.text.split('.');
-                    if (parts.length !== 3) {
-                        throw new Error('Invalid encrypted data format.');
-                    }
+                    await this.sleep(200); this.terminalLog.push('Initializing decryption sequence...');
+                    
+                    await this.sleep(300); this.terminalLog.push('Reversing custom symbol encoding...');
+                    const base64Str = customEncoder.decode(this.text);
+                    
+                    const parts = base64Str.split('.');
+                    if (parts.length !== 3) throw new Error('Format kode tidak valid');
                     
                     const salt = utils.base64ToArrayBuffer(parts[0]);
                     const iv = utils.base64ToArrayBuffer(parts[1]);
                     const ciphertext = utils.base64ToArrayBuffer(parts[2]);
 
+                    await this.sleep(500); this.terminalLog.push('Re-generating cryptographic key...');
                     const key = await this.getKey(this.passphrase, salt);
-
-                    const decrypted = await window.crypto.subtle.decrypt(
-                        { name: 'AES-GCM', iv: iv },
-                        key,
-                        ciphertext
-                    );
-
-                    const dec = new TextDecoder();
-                    this.output = dec.decode(decrypted);
+                    
+                    await this.sleep(500); this.terminalLog.push('Decrypting data...');
+                    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+                    
+                    this.output = new TextDecoder().decode(decrypted);
+                    await this.sleep(300); this.terminalLog.push('Decryption complete.');
+                    
+                    this.isLoading = false;
+                    this.typeEffect(this.$refs.outputElement, this.output, 20, () => {
+                         this.finalOutput = this.output; // Ensure final text is set for copy/paste
+                    });
 
                 } catch (e) {
-                    this.error = 'ERROR: Decryption failed. Invalid key or corrupt data.';
-                } finally {
+                    if (e.message.includes('Format')) {
+                        this.error = 'Format kode tidak valid';
+                    } else {
+                        this.error = 'Kata kunci salah';
+                    }
                     this.isLoading = false;
                 }
+            },
+            
+            handleDownload() {
+                const blob = new Blob([this.output], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rcode_output.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+            
+            triggerFileInput() {
+                this.$refs.fileInput.click();
+            },
+            
+            handleFileImport(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.text = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        },
+        watch: {
+            output(newVal) {
+                // Keep a non-animated version for download
+                this.finalOutput = newVal;
             }
         }
     }).mount('#app');
