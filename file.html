@@ -313,8 +313,6 @@
                         { name: 'AES-GCM', iv }, key, fileBuffer
                     );
                     
-                    // ** INI BAGIAN PERBAIKAN BUG **
-                    // Menggabungkan semua bagian sebagai Uint8Array untuk mencegah korupsi data.
                     const encryptedData = new Uint8Array(salt.byteLength + iv.byteLength + ciphertext.byteLength);
                     encryptedData.set(salt, 0);
                     encryptedData.set(iv, salt.byteLength);
