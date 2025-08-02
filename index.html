@@ -156,13 +156,15 @@
         
         .result-box {
             margin-top: 20px;
-            word-wrap: break-word;
-            white-space: pre-wrap;
             background-color: #051005;
             padding: 15px;
             border: 1px dashed var(--border-color);
             min-height: 80px;
             font-size: 0.95em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            overflow-y: auto;
         }
         
         .terminal-log {
@@ -203,7 +205,7 @@
             <input type="file" ref="fileInput" @change="handleFileImport" accept=".txt" style="display: none;">
         </div>
 
-        <div v-if="isLoading || output || error" class="result-box">
+        <div v-if="isLoading || finalOutput || error" class="result-box">
             <div v-if="isLoading">
                 <div v-for="log in terminalLog" class="terminal-log">> {{ log }}</div>
             </div>
@@ -229,19 +231,33 @@
     };
 
     const customEncoder = {
-        map: { 'A': '@', 'B': '×', 'C': '%', 'D': '$', 'E': '#', 'F': '&', 'G': '`', 'H': ';', 'I': ':', 'J': '_', 'K': '-', 'L': '+', 'M': '=', 'N': '|', 'O': '~', 'P': '<', 'Q': '>', 'R': '*', 'S': '(', 'T': ')', 'U': '[', 'V': ']', 'W': '{', 'X': '}', 'Y': '\\', 'Z': '/', 'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e', 'f': 'f', 'g': 'g', 'h': 'h', 'i': 'i', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n', 'o': 'o', 'p': 'p', 'q': 'q', 'r': 'r', 's': 's', 't': 't', 'u': 'u', 'v': 'v', 'w': 'w', 'x': 'x', 'y': 'y', 'z': 'z', '0': '!', '1': '?', '2': '^', '3': '(', '4': ')', '5': '[', '6': ']', '7': '{', '8': '}', '9': '~', '+': '+', '/': '/', '=': '='},
+        // *** BAGIAN INI TELAH DIPERBAIKI ***
+        // Peta sekarang dijamin 1-ke-1, tidak ada simbol yang duplikat.
+        map: {
+            // Uppercase
+            'A': '@', 'B': '×', 'C': '%', 'D': '$', 'E': '#', 'F': '&', 'G': '`',
+            'H': ';', 'I': ':', 'J': '_', 'K': '<', 'L': '>', 'M': '|', 'N': '?',
+            'O': '*', 'P': '(', 'Q': ')', 'R': '[', 'S': ']', 'T': '{', 'U': '}',
+            'V': '\\', 'W': '¡', 'X': '¢', 'Y': '£', 'Z': '¤',
+            // Numbers
+            '0': '!', '1': '±', '2': '^', '3': '§', '4': '¨', '5': '©', '6': 'ª',
+            '7': '«', '8': '®', '9': '¯',
+        },
         reverseMap: null,
         
         init() {
+            // Membuat peta terbalik untuk proses dekripsi.
             this.reverseMap = Object.fromEntries(Object.entries(this.map).map(([k, v]) => [v, k]));
         },
 
         encode(base64Str) {
+            // Jika karakter ada di 'map', ganti dengan simbol. Jika tidak, biarkan apa adanya.
             return base64Str.split('').map(char => this.map[char] || char).join('');
         },
 
         decode(customStr) {
             if (!this.reverseMap) this.init();
+            // Jika simbol ada di 'reverseMap', kembalikan ke karakter asli. Jika tidak, biarkan.
             return customStr.split('').map(char => this.reverseMap[char] || char).join('');
         }
     };
@@ -267,6 +283,7 @@
             },
             
             async typeEffect(element, text, speed, onComplete = () => {}) {
+                if(!element) return;
                 element.innerHTML = '';
                 const caret = '<span class="caret">|</span>';
                 for (let i = 0; i < text.length; i++) {
@@ -357,6 +374,7 @@
                     if (e.message.includes('Format')) {
                         this.error = 'Format kode tidak valid';
                     } else {
+                        // Kesalahan ini terjadi jika dekripsi gagal, 99% karena kunci salah.
                         this.error = 'Kata kunci salah';
                     }
                     this.isLoading = false;
@@ -364,7 +382,8 @@
             },
             
             handleDownload() {
-                const blob = new Blob([this.output], { type: 'text/plain;charset=utf-8' });
+                if (!this.finalOutput) return;
+                const blob = new Blob([this.finalOutput], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -388,6 +407,8 @@
                     this.text = e.target.result;
                 };
                 reader.readAsText(file);
+                // Reset file input value to allow re-importing the same file
+                event.target.value = '';
             }
         },
         watch: {
