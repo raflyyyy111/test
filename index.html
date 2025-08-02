@@ -10,13 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #000000;
-            --primary-green: #00FF7F; /* SpringGreen */
-            --secondary-green: #39FF14; /* NeonGreen */
-            --dark-green: #006400;
+            --bg-color: #050505;
+            --primary-green: #00FF7F;
+            --secondary-green: #39FF14;
+            --accent-green: #00B870;
+            --dark-green: #004d00;
             --text-color: var(--primary-green);
-            --border-color: #004d00;
-            --card-bg: rgba(10, 25, 10, 0.3);
+            --border-color: #006400;
+            --card-bg: rgba(10, 25, 10, 0.5);
             --error-color: #FF4136;
         }
 
@@ -24,21 +25,11 @@
             50% { opacity: 0; }
         }
 
-        @keyframes scanline {
-            0% { background-position: 0 0; }
-            100% { background-position: 0 100%; }
-        }
-
         body {
             font-family: 'Roboto Mono', monospace;
             background-color: var(--bg-color);
-            background-image: repeating-linear-gradient(
-                0deg,
-                rgba(0, 255, 0, 0.03),
-                rgba(0, 255, 0, 0.03) 1px,
-                transparent 1px,
-                transparent 2px
-            );
+            background-image: radial-gradient(ellipse at bottom, #0a0a0a 0%, var(--bg-color) 70%),
+                              repeating-linear-gradient(0deg, rgba(0, 255, 0, 0.05), rgba(0, 255, 0, 0.05) 1px, transparent 1px, transparent 2px);
             color: var(--text-color);
             margin: 0;
             padding: 20px;
@@ -46,6 +37,7 @@
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
+            transition: background-color 0.3s ease;
         }
 
         #app {
@@ -53,17 +45,17 @@
             max-width: 800px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 25px;
         }
 
         h1 {
             color: var(--secondary-green);
-            text-shadow: 0 0 5px var(--secondary-green), 0 0 10px var(--secondary-green);
+            text-shadow: 0 0 8px var(--secondary-green), 0 0 15px var(--secondary-green);
             text-align: center;
             margin: 0;
-            letter-spacing: 4px;
+            letter-spacing: 5px;
             text-transform: uppercase;
-            height: 1.5em; /* Reserve space */
+            height: 1.5em;
         }
 
         h1 .caret {
@@ -74,17 +66,19 @@
         
         .author {
             text-align: center;
-            color: var(--dark-green);
-            margin: -15px 0 10px 0;
+            color: var(--accent-green);
+            margin: -15px 0 20px 0;
             font-size: 0.9em;
+            text-shadow: 0 0 3px var(--accent-green);
         }
 
         .card {
             background-color: var(--card-bg);
-            backdrop-filter: blur(2px);
-            padding: 25px;
+            backdrop-filter: blur(5px);
+            padding: 30px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+            border-radius: 5px;
         }
 
         textarea, input[type="password"] {
@@ -98,12 +92,14 @@
             font-size: 1em;
             box-sizing: border-box;
             resize: vertical;
+            transition: all 0.2s ease;
         }
 
         textarea:focus, input[type="password"]:focus {
             outline: none;
             border-color: var(--primary-green);
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            background-color: #0a1f0a;
         }
         
         textarea {
@@ -133,6 +129,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             text-shadow: none;
+            border-radius: 3px;
         }
         
         button.secondary {
@@ -140,18 +137,22 @@
             color: var(--primary-green);
         }
 
-        button:hover {
-            box-shadow: 0 0 15px var(--secondary-green);
+        button:hover:not(:disabled) {
+            box-shadow: 0 0 20px var(--secondary-green);
             transform: translateY(-2px);
+            color: #fff;
+            background: linear-gradient(45deg, var(--secondary-green), var(--primary-green));
+        }
+
+        button.secondary:hover:not(:disabled) {
+            color: var(--bg-color);
         }
         
         button:disabled {
-            background: #555;
-            border-color: #555;
-            color: #999;
+            background: #2a2a2a;
+            border-color: #444;
+            color: #666;
             cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
         }
         
         .result-box {
@@ -168,7 +169,8 @@
         }
         
         .terminal-log {
-            color: var(--dark-green);
+            color: var(--accent-green);
+            opacity: 0.8;
         }
 
         .error-message {
@@ -200,7 +202,7 @@
         </div>
         
         <div class="file-actions">
-            <button @click="handleDownload" class="secondary" :disabled="!output">Download (.txt)</button>
+            <button @click="handleDownload" class="secondary" :disabled="!finalOutput">Download (.txt)</button>
             <button @click="triggerFileInput" class="secondary" :disabled="isLoading">Import (.txt)</button>
             <input type="file" ref="fileInput" @change="handleFileImport" accept=".txt" style="display: none;">
         </div>
@@ -231,33 +233,28 @@
     };
 
     const customEncoder = {
-        // *** BAGIAN INI TELAH DIPERBAIKI ***
-        // Peta sekarang dijamin 1-ke-1, tidak ada simbol yang duplikat.
         map: {
-            // Uppercase
             'A': '@', 'B': '×', 'C': '%', 'D': '$', 'E': '#', 'F': '&', 'G': '`',
             'H': ';', 'I': ':', 'J': '_', 'K': '<', 'L': '>', 'M': '|', 'N': '?',
             'O': '*', 'P': '(', 'Q': ')', 'R': '[', 'S': ']', 'T': '{', 'U': '}',
             'V': '\\', 'W': '¡', 'X': '¢', 'Y': '£', 'Z': '¤',
-            // Numbers
             '0': '!', '1': '±', '2': '^', '3': '§', '4': '¨', '5': '©', '6': 'ª',
             '7': '«', '8': '®', '9': '¯',
         },
         reverseMap: null,
         
         init() {
-            // Membuat peta terbalik untuk proses dekripsi.
+            if (this.reverseMap) return;
             this.reverseMap = Object.fromEntries(Object.entries(this.map).map(([k, v]) => [v, k]));
         },
 
         encode(base64Str) {
-            // Jika karakter ada di 'map', ganti dengan simbol. Jika tidak, biarkan apa adanya.
+            this.init();
             return base64Str.split('').map(char => this.map[char] || char).join('');
         },
 
         decode(customStr) {
-            if (!this.reverseMap) this.init();
-            // Jika simbol ada di 'reverseMap', kembalikan ke karakter asli. Jika tidak, biarkan.
+            this.init();
             return customStr.split('').map(char => this.reverseMap[char] || char).join('');
         }
     };
@@ -290,7 +287,7 @@
                     element.innerHTML = text.substring(0, i + 1) + caret;
                     await this.sleep(speed);
                 }
-                element.innerHTML = text; // Remove caret at the end
+                element.innerHTML = text;
                 onComplete();
             },
 
@@ -367,14 +364,13 @@
                     
                     this.isLoading = false;
                     this.typeEffect(this.$refs.outputElement, this.output, 20, () => {
-                         this.finalOutput = this.output; // Ensure final text is set for copy/paste
+                         this.finalOutput = this.output;
                     });
 
                 } catch (e) {
                     if (e.message.includes('Format')) {
                         this.error = 'Format kode tidak valid';
                     } else {
-                        // Kesalahan ini terjadi jika dekripsi gagal, 99% karena kunci salah.
                         this.error = 'Kata kunci salah';
                     }
                     this.isLoading = false;
@@ -407,13 +403,11 @@
                     this.text = e.target.result;
                 };
                 reader.readAsText(file);
-                // Reset file input value to allow re-importing the same file
                 event.target.value = '';
             }
         },
         watch: {
             output(newVal) {
-                // Keep a non-animated version for download
                 this.finalOutput = newVal;
             }
         }
