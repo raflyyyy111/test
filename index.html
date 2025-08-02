@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R-code</title>
+    <title>R-code - Enkripsi Teks</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,10 +21,6 @@
             --error-color: #FF4136;
         }
 
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
-
         body {
             font-family: 'Roboto Mono', monospace;
             background-color: var(--bg-color);
@@ -37,7 +33,6 @@
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
-            transition: background-color 0.3s ease;
         }
 
         #app {
@@ -55,13 +50,6 @@
             margin: 0;
             letter-spacing: 5px;
             text-transform: uppercase;
-            height: 1.5em;
-        }
-
-        h1 .caret {
-            animation: blink 1s step-end infinite;
-            color: var(--secondary-green);
-            font-weight: bold;
         }
         
         .author {
@@ -70,6 +58,30 @@
             margin: -15px 0 20px 0;
             font-size: 0.9em;
             text-shadow: 0 0 3px var(--accent-green);
+        }
+
+        .navigation {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .navigation a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+        .navigation a:hover {
+            background-color: var(--dark-green);
+        }
+        .navigation a.active {
+            color: var(--secondary-green);
+            box-shadow: 0 0 10px var(--secondary-green);
+            font-weight: bold;
         }
 
         .card {
@@ -92,14 +104,12 @@
             font-size: 1em;
             box-sizing: border-box;
             resize: vertical;
-            transition: all 0.2s ease;
         }
 
         textarea:focus, input[type="password"]:focus {
             outline: none;
             border-color: var(--primary-green);
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
-            background-color: #0a1f0a;
         }
         
         textarea {
@@ -110,6 +120,7 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .file-actions {
@@ -140,12 +151,6 @@
         button:hover:not(:disabled) {
             box-shadow: 0 0 20px var(--secondary-green);
             transform: translateY(-2px);
-            color: #fff;
-            background: linear-gradient(45deg, var(--secondary-green), var(--primary-green));
-        }
-
-        button.secondary:hover:not(:disabled) {
-            color: var(--bg-color);
         }
         
         button:disabled {
@@ -178,14 +183,18 @@
             font-weight: bold;
             text-shadow: 0 0 5px var(--error-color);
         }
-
     </style>
 </head>
 <body>
 
 <div id="app">
-    <h1 ref="titleElement"><span class="caret">|</span></h1>
-    <p class="author">rexha4u@gmail.com</p>
+    <h1>R-code 📟</h1>
+    <p class="author">dibuat oleh rxh</p>
+
+    <div class="navigation">
+        <a href="index.html" class="active">Enkripsi Teks</a>
+        <a href="file.html">Enkripsi File</a>
+    </div>
 
     <div class="card">
         <textarea v-model="text" placeholder="Masukkan teks atau paste kode"></textarea>
@@ -204,6 +213,7 @@
         <div class="file-actions">
             <button @click="handleDownload" class="secondary" :disabled="!finalOutput">Download (.txt)</button>
             <button @click="triggerFileInput" class="secondary" :disabled="isLoading">Import (.txt)</button>
+            <button @click="handleCopy" class="secondary" :disabled="!finalOutput">{{ copyButtonText }}</button>
             <input type="file" ref="fileInput" @change="handleFileImport" accept=".txt" style="display: none;">
         </div>
 
@@ -268,29 +278,15 @@
                 finalOutput: '',
                 error: '',
                 isLoading: false,
-                terminalLog: []
+                terminalLog: [],
+                copyButtonText: 'Copy Hasil'
             };
-        },
-        mounted() {
-            this.typeEffect(this.$refs.titleElement, "R-code", 150);
         },
         methods: {
             sleep(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
             },
             
-            async typeEffect(element, text, speed, onComplete = () => {}) {
-                if(!element) return;
-                element.innerHTML = '';
-                const caret = '<span class="caret">|</span>';
-                for (let i = 0; i < text.length; i++) {
-                    element.innerHTML = text.substring(0, i + 1) + caret;
-                    await this.sleep(speed);
-                }
-                element.innerHTML = text;
-                onComplete();
-            },
-
             async getKey(passphrase, salt) {
                 const keyMaterial = await crypto.subtle.importKey(
                     'raw', new TextEncoder().encode(passphrase), { name: 'PBKDF2' }, false, ['deriveKey']
@@ -326,11 +322,9 @@
                     
                     await this.sleep(300); this.terminalLog.push('Encryption complete.');
                     
-                    this.isLoading = false;
-                    this.typeEffect(this.$refs.outputElement, this.output, 10);
-
                 } catch (e) {
                     this.error = 'Proses enkripsi gagal.';
+                } finally {
                     this.isLoading = false;
                 }
             },
@@ -361,11 +355,6 @@
                     
                     this.output = new TextDecoder().decode(decrypted);
                     await this.sleep(300); this.terminalLog.push('Decryption complete.');
-                    
-                    this.isLoading = false;
-                    this.typeEffect(this.$refs.outputElement, this.output, 20, () => {
-                         this.finalOutput = this.output;
-                    });
 
                 } catch (e) {
                     if (e.message.includes('Format')) {
@@ -373,6 +362,7 @@
                     } else {
                         this.error = 'Kata kunci salah';
                     }
+                } finally {
                     this.isLoading = false;
                 }
             },
@@ -399,11 +389,19 @@
                 if (!file) return;
                 
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.text = e.target.result;
-                };
+                reader.onload = (e) => { this.text = e.target.result; };
                 reader.readAsText(file);
                 event.target.value = '';
+            },
+
+            handleCopy() {
+                if (!this.finalOutput) return;
+                navigator.clipboard.writeText(this.finalOutput).then(() => {
+                    this.copyButtonText = 'Disalin!';
+                    setTimeout(() => { this.copyButtonText = 'Copy Hasil'; }, 2000);
+                }).catch(err => {
+                    this.error = 'Gagal menyalin ke clipboard.';
+                });
             }
         },
         watch: {
